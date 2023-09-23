@@ -1,21 +1,32 @@
 from langchain.utilities import SQLDatabase
 from langchain.prompts import PromptTemplate
-from langchain.chains import ConversationChain
+from langchain.chains import ConversationChain, LLMChain
 from langchain.memory import ConversationBufferMemory
-from template import generateTemplate
+from template import generateConversationTemplate, generateVerificationTemplate
 
 
 class DBObject():
     db: SQLDatabase
-    chain: ConversationChain
+    chat_chain: ConversationChain
+    verify_chain: LLMChain
 
     def __init__(self, db: SQLDatabase, llm):
         self.db = db
-        chat_template = PromptTemplate(template=generateTemplate(self.get_schema(), ), input_variables=["history", "input"])
-        self.chain = ConversationChain(
+
+        schema = self.get_schema()
+
+        chat_template = PromptTemplate(template=generateConversationTemplate(schema, ), input_variables=["history", "input"])
+        self.chat_chain = ConversationChain(
                 prompt=chat_template,
                 llm=llm,
                 memory=ConversationBufferMemory(k=4),
+        )
+
+        verify_template = PromptTemplate.from_template(generateVerificationTemplate(schema))
+
+        self.verify_chain = LLMChain(
+            prompt=verify_template,
+            llm=llm
         )
 
 
@@ -25,7 +36,20 @@ class DBObject():
     def make_query(
         self, question: str, hints: list[str]
     ) -> str:
-        return self.chain.predict(
-            input=f"Question: {question} \nTable name hints: {', '.join(hints)}"
-        )
+
+        concat_input = f"Question: {question} \nTable name hints: {', '.join(hints)}"
+
+
+        verification_result = self.verify_chain.predict(input=concat_input)
+        
+        invalid_response = """
+I'm sorry, I'm not sure how to answer that given this database.
+        """
+
+        if verification_result.lower() != "true":
+            return invalid_response
+
+        return self.db.run(self.chat_chain.predict(
+            input= concat_input
+        ))
 
