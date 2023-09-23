@@ -12,7 +12,7 @@ SQL Query:"""
     return format
 
 def generateVerificationTemplate(schema: str):
-    format = """You are an AI assistant whose purpose is to determine if an SQL query is valid, given the database schema. You must output "True" if the query is valid, and "False" otherwise.
+    format = """You are an AI assistant whose purpose is to determine if an SQL query will return an error. You must output "True" if the query will return an error, and "False" otherwise.
 
 Schema:
 """+schema+"""
