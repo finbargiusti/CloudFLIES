@@ -17,9 +17,6 @@ def generateVerificationTemplate(schema: str):
 Schema:
 """+schema+"""
 
-Table name hints:
-{hints}
-
 {input}
 Response:"""
     return format
