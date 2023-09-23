@@ -21,7 +21,7 @@ class DBObject:
 
 
 if __name__ == "__main__":
-    # attempt to generate
+    # test generation
 
     db = SQLDatabase.from_uri("sqlite:///sampleDatabases/Northwind3.db?mode=ro")
 
