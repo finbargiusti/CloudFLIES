@@ -14,6 +14,7 @@ class DBObject():
         self.db = db
 
         schema = self.get_schema()
+        
 
         chat_template = PromptTemplate(template=generateConversationTemplate(schema, ), input_variables=["history", "input"])
         self.chat_chain = ConversationChain(
@@ -49,8 +50,12 @@ class DBObject():
 I'm sorry, I'm not sure how to answer that given this database.
         """
 
-        if verification_result.lower() != "true":
+        if verification_result.lower().strip() == "true":
             return invalid_response
 
-        return self.db.run(sql_query)
-
+        try:
+            response = self.db.run(sql_query)
+        except (e):
+            return """
+An unexpected error occured.
+            """
