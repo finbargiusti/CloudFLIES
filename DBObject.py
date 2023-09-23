@@ -22,3 +22,4 @@ class DBObject:
         return chain.predict(
             question=question, hints=", ".join(hints), schema=self.get_schema()
         )
+
