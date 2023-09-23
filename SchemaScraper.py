@@ -1,9 +1,9 @@
-import sqlite3.Connection
+import sqlite3
 
 def SchemaScraper():
 
     # TODO: maybe add strategy injection
-    def __init__(self, db: Connection):
+    def __init__(self, db: sqlite3.Connection):
         return
 
     def get_schema() -> str:
