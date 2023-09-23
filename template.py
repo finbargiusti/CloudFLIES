@@ -12,11 +12,11 @@ SQL Query:"""
     return format
 
 def generateVerificationTemplate(schema: str):
-    format = """You are an AI system designed to determine if the answer to a natural language query can be found in the database described in the schema below. If the answer can be found, you will simply respond "True", otherwise you will respond "False". 
+    format = """You are an AI assistant whose purpose is to determine if an SQL query is valid, given the database schema. You must output "True" if the query is valid, and "False" otherwise.
 
 Schema:
 """+schema+"""
 
-{input}
+Query: {input}
 Response:"""
     return format

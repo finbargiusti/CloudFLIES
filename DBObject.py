@@ -39,8 +39,11 @@ class DBObject():
 
         concat_input = f"Question: {question} \nTable name hints: {', '.join(hints)}"
 
+        sql_query = self.chat_chain.predict(
+            input= concat_input
+        )
 
-        verification_result = self.verify_chain.predict(input=concat_input)
+        verification_result = self.verify_chain.predict(input=sql_query)
         
         invalid_response = """
 I'm sorry, I'm not sure how to answer that given this database.
@@ -49,7 +52,5 @@ I'm sorry, I'm not sure how to answer that given this database.
         if verification_result.lower() != "true":
             return invalid_response
 
-        return self.db.run(self.chat_chain.predict(
-            input= concat_input
-        ))
+        return self.db.run(sql_query)
 
