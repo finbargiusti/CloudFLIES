@@ -1,25 +1,31 @@
 from langchain.utilities import SQLDatabase
-from langchain.prompts import ChatPromptTemplate
+from langchain.prompts import PromptTemplate
 from langchain.chains import ConversationChain
+from langchain.memory import ConversationBufferMemory
 from template import generateTemplate
 
 
-class DBObject:
+class DBObject():
     db: SQLDatabase
-    prompt_template: ChatPromptTemplate
+    chain: ConversationChain
 
-    def __init__(self, db: SQLDatabase):
-        self.prompt_template = generateTemplate()
+    def __init__(self, db: SQLDatabase, llm):
         self.db = db
+        chat_template = PromptTemplate(template=generateTemplate(self.get_schema(), ), input_variables=["history", "input"])
+        self.chain = ConversationChain(
+                prompt=chat_template,
+                llm=llm,
+                memory=ConversationBufferMemory(k=4),
+        )
+
 
     def get_schema(self) -> str:
         return self.db.get_table_info()
 
     def make_query(
-        self, question: str, hints: list[str], chain: ConversationChain
+        self, question: str, hints: list[str]
     ) -> str:
-        chain.prompt.template = self.prompt_template
-        return chain.predict(
-            question=question, hints=", ".join(hints), schema=self.get_schema()
+        return self.chain.predict(
+            input=f"Question: {question} \nTable name hints: {', '.join(hints)}"
         )
 
