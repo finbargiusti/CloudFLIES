@@ -2,7 +2,7 @@ from langchain.prompts import ChatPromptTemplate
 
 
 def generateTemplate():
-    format = """Based on the table schema and array of related hints blow, write a SQL query that would answer the user's question
+    format = """You are an AI chatbot designed to create SQL queries based on a schema, a series of table name hints, and inputs from the user.
 
 Schema:
 {schema}
@@ -10,6 +10,9 @@ Schema:
 Hints:
 {hints}
 
-Question: {question}
+History: 
+{history}
+
+Current Question: {question}
 SQL Query:"""
-    return ChatPromptTemplate.from_template(format)
+    return format
