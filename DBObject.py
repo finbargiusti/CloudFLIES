@@ -2,60 +2,72 @@ from langchain.utilities import SQLDatabase
 from langchain.prompts import PromptTemplate
 from langchain.chains import ConversationChain, LLMChain
 from langchain.memory import ConversationBufferMemory
-from template import generateConversationTemplate, generateVerificationTemplate
+from template import generateConversationTemplate, generateNaturalResponseTemplate, modifyQuestionTemplate
+import re
 
 
 class DBObject():
     db: SQLDatabase
-    chat_chain: ConversationChain
-    verify_chain: LLMChain
+    conversion_chain: LLMChain
+    chat_chain: LLMChain
+    response_chain: LLMChain
 
     def __init__(self, db: SQLDatabase, llm):
         self.db = db
 
-        schema = self.get_schema()
+        chat_template = PromptTemplate(template=generateConversationTemplate(), input_variables=["schema", "input"])
         
-
-        chat_template = PromptTemplate(template=generateConversationTemplate(schema, ), input_variables=["history", "input"])
-        self.chat_chain = ConversationChain(
-                prompt=chat_template,
-                llm=llm,
-                memory=ConversationBufferMemory(k=4),
+        response_template = PromptTemplate(
+            template=generateNaturalResponseTemplate(),
+            input_variables=["input", "data"]
         )
-
-        verify_template = PromptTemplate.from_template(generateVerificationTemplate(schema))
-
-        self.verify_chain = LLMChain(
-            prompt=verify_template,
+        
+        conversion_template = PromptTemplate(template=modifyQuestionTemplate(), input_variables=["schema", "input"])
+        
+        self.chat_chain = LLMChain(
+            prompt=chat_template,
+            llm=llm
+        )
+        
+        self.response_chain = LLMChain(
+            prompt=response_template,
+            llm=llm
+        )
+        self.conversion_chain = LLMChain(
+            prompt=conversion_template,
             llm=llm
         )
 
 
-    def get_schema(self) -> str:
-        return self.db.get_table_info()
+    def get_schema(self, hints: list[str]) -> str:
+        return self.db.get_table_info_no_throw()
 
     def make_query(
         self, question: str, hints: list[str]
     ) -> str:
-
-        concat_input = f"Question: {question} \nTable name hints: {', '.join(hints)}"
-
+        
+        
+        schema = self.get_schema(hints)
+        
+        converted_input = "In this database, " + question
+        
         sql_query = self.chat_chain.predict(
-            input= concat_input
+            input= converted_input,
+            schema=schema
+        )
+        
+        print("QUESTION: "+question)
+        print("GENERATED QUERY: "+sql_query.strip())
+
+        response = self.db.run_no_throw(sql_query.strip())
+
+        human_readable = self.response_chain.predict(
+            input=converted_input,
+            data=response,
         )
 
-        verification_result = self.verify_chain.predict(input=sql_query)
+        del question
+        del response
+        del sql_query
         
-        invalid_response = """
-I'm sorry, I'm not sure how to answer that given this database.
-        """
-
-        if verification_result.lower().strip() == "true":
-            return invalid_response
-
-        try:
-            response = self.db.run(sql_query)
-        except (e):
-            return """
-An unexpected error occured.
-            """
+        return human_readable
